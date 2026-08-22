@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.adba.beeagent.debug",
+      "sha256_cert_fingerprints": [
+        "81:4D:D8:F3:5D:11:31:0A:79:B3:4F:A3:1D:AA:3E:21:9E:38:B9:E4:2F:EB:46:17:ED:D3:A5:03:6E:A2:9A:75"
+      ]
+    }
+  }
+]
