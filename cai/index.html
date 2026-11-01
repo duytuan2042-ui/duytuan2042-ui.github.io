@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Cài BeeAgent</title>
+  <!-- Trang cho mạch Takabee chạm mù: mỗi bước là 1 nút PHỦ KÍN màn hình -> chạm giữa màn luôn trúng, mọi đời máy.
+       Bước 1: chạm = tải APK. Bước 2 (sau khi cài): chạm = mở BeeAgent qua App Link và ghép Reg Center.
+       Mã ghép nằm sau dấu # (không gửi lên máy chủ web). -->
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1220;
+      font-family: system-ui, sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+    a.big { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-decoration: none; text-align: center; padding: 24px; box-sizing: border-box; }
+    a.big b { font-size: 9vw; line-height: 1.15; }
+    a.big span { margin-top: 3vh; font-size: 4.2vw; opacity: .8; line-height: 1.4; }
+    #dl { background: #f5b942; color: #172033; }
+    #open { background: #2f80ed; color: #fff; }
+    #bad { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: #5a1620; color: #fff; font-size: 6vw; text-align: center; padding: 24px; box-sizing: border-box; }
+    #redo { position: fixed; top: 0; left: 0; z-index: 2; padding: 6px 10px; font-size: 12px;
+      color: rgba(255,255,255,.55); background: rgba(0,0,0,.25); border-bottom-right-radius: 8px; text-decoration: none; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<a class="big" id="dl" href="#" rel="nofollow" hidden><b>① TẢI BEEAGENT</b><span>Chạm bất kỳ đâu</span></a>
+<a class="big" id="open" href="#" rel="nofollow" hidden><b>② MỞ BEEAGENT<br>&amp; KẾT NỐI</b><span>Đã cài xong thì chạm bất kỳ đâu</span></a>
+<div id="bad" hidden>Mã cài không hợp lệ hoặc đã hết hạn.<br>Tạo “Link cài mù” mới trên Reg Center.</div>
+<a id="redo" href="#" hidden>tải lại</a>
+<script>
+(() => {
+  'use strict';
+  const APK = 'https://github.com/duytuan2042-ui/beeagent-downloads/releases/download/' +
+    'v0.43.0-type-chars/BeeAgent-v0.43.0-type-chars-debug.apk';
+  const $ = (id) => document.getElementById(id);
+  // Dạng gọn do mạch gõ (chỉ chữ/số . / - để đúng cả bàn phím JIS):
+  //   #1/<host>/<port>/<fp hex>/<token>/<exp>/<host+đường dẫn Internet | ->
+  // -> đổi về tham số chuẩn như QR thường (v, endpoint, fp, token, exp, inet).
+  let p = new URLSearchParams(location.hash.slice(1));
+  const c = location.hash.match(/^#1\/([A-Za-z0-9.-]+)\/(\d{1,5})\/([0-9a-f]{64})\/([A-Za-z0-9_-]{32,256})\/(\d+)\/(.+)$/i);
+  if (c) {
+    p = new URLSearchParams();
+    p.set('v', '1');
+    p.set('endpoint', 'wss://' + c[1] + ':' + c[2]);
+    p.set('fp', c[3].toLowerCase().match(/../g).join(':'));
+    p.set('token', c[4]);
+    p.set('exp', c[5]);
+    if (c[6] !== '-') p.set('inet', 'wss://' + c[6]);
+  }
+  const hash = '#' + p.toString();
+  const valid = p.get('v') === '1' && /^wss:\/\//.test(p.get('endpoint') || '') &&
+    /^(?:[0-9a-f]{2}:){31}[0-9a-f]{2}$/i.test(p.get('fp') || '') &&
+    /^[A-Za-z0-9_-]{32,256}$/.test(p.get('token') || '') &&
+    Number(p.get('exp')) * 1000 >= Date.now();
+  if (!valid) { $('bad').hidden = false; return; }
+
+  // Nhớ đã bấm tải chưa (máy vừa reset -> chưa có gì -> luôn bắt đầu ở bước 1)
+  const KEY = 'bee_cai_buoc';
+  const get = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
+  const set = (v) => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} };
+  const show = (step) => {
+    $('dl').hidden = step !== 1;
+    $('open').hidden = step !== 2;
+    $('redo').hidden = step !== 2;
+  };
+
+  $('dl').href = APK;
+  $('dl').addEventListener('click', () => { set('2'); setTimeout(() => show(2), 300); });
+  $('open').href = '../open/' + hash;
+  $('redo').addEventListener('click', (e) => { e.preventDefault(); set(null); show(1); });
+  show(get() === '2' ? 2 : 1);
+})();
+</script>
+</body>
+</html>
