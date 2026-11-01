@@ -68,6 +68,18 @@
   };
 
   $('dl').href = APK;
+  // Luôn tải BeeAgent MỚI NHẤT: hỏi GitHub các bản phát hành, lấy file BeeAgent-v*.apk mới nhất
+  // (kho có lẫn bản Reg Center / Takabee Reg). Lỗi mạng / hết lượt hỏi -> giữ link dự phòng ở trên.
+  fetch('https://api.github.com/repos/duytuan2042-ui/beeagent-downloads/releases?per_page=30')
+    .then((r) => r.ok ? r.json() : [])
+    .then((rels) => {
+      for (const rel of rels) {
+        if (rel.draft) continue;                 // BeeAgent luôn đăng dạng prerelease -> không loại
+        const a = (rel.assets || []).find((x) => /^BeeAgent-v[\d.]+.*\.apk$/i.test(x.name));
+        if (a) { $('dl').href = a.browser_download_url; break; }
+      }
+    })
+    .catch(() => {});
   $('dl').addEventListener('click', () => { set('2'); setTimeout(() => show(2), 300); });
   $('open').href = '../open/' + hash;
   $('redo').addEventListener('click', (e) => { e.preventDefault(); set(null); show(1); });
