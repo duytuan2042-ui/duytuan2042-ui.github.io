@@ -33,22 +33,40 @@
 <script>
 (() => {
   'use strict';
-  const APK = 'https://github.com/duytuan2042-ui/beeagent-downloads/releases/download/' +
-    'v0.44.0-battery-widget-selfupdate/BeeAgent-v0.44.0-battery-widget-selfupdate-debug.apk';
+  // 2 bản BeeAgent: link có dấu bản khách (QR: ed=c · link cài mù: #c1/) -> bản KHÁCH (không mật khẩu / bot);
+  // link không dấu (mọi link cũ của admin) -> bản ADMIN như trước.
+  const BASE = 'https://github.com/duytuan2042-ui/beeagent-downloads/releases/download/';
+  const APK_ADMIN = BASE + 'v0.45.0-params-edition/BeeAgent-v0.45.0-params-edition-admin-debug.apk';
+  const APK_CUS = BASE + 'cus-v0.45.0-params-edition/TakabeeAgent-Customer-v0.45.0-params-edition.apk';
+  const RE_ADMIN = /^BeeAgent-v[\d.]+.*\.apk$/i;
+  const RE_CUS = /^TakabeeAgent-Customer-v[\d.]+.*\.apk$/i;
+  // Luôn tải bản MỚI NHẤT đúng loại (kho có lẫn Reg Center / Takabee Reg). Lỗi mạng -> giữ link dự phòng.
+  const latest = (cus, apply) => {
+    fetch('https://api.github.com/repos/duytuan2042-ui/beeagent-downloads/releases?per_page=30')
+      .then((r) => r.ok ? r.json() : [])
+      .then((rels) => {
+        for (const rel of rels) {
+          if (rel.draft) continue;
+          const a = (rel.assets || []).find((x) => (cus ? RE_CUS : RE_ADMIN).test(x.name));
+          if (a) { apply(a.browser_download_url); break; }
+        }
+      })
+      .catch(() => {});
+  };
   const $ = (id) => document.getElementById(id);
   // Dạng gọn do mạch gõ (chỉ chữ/số . / - để đúng cả bàn phím JIS):
-  //   #1/<host>/<port>/<fp hex>/<token>/<exp>/<host+đường dẫn Internet | ->
+  //   #1/ (admin) hoặc #c1/ (bản khách) + <host>/<port>/<fp hex>/<token>/<exp>/<host+đường dẫn Internet | ->
   // -> đổi về tham số chuẩn như QR thường (v, endpoint, fp, token, exp, inet).
   let p = new URLSearchParams(location.hash.slice(1));
-  const c = location.hash.match(/^#1\/([A-Za-z0-9.-]+)\/(\d{1,5})\/([0-9a-f]{64})\/([A-Za-z0-9_-]{32,256})\/(\d+)\/(.+)$/i);
+  const c = location.hash.match(/^#(c?)1\/([A-Za-z0-9.-]+)\/(\d{1,5})\/([0-9a-f]{64})\/([A-Za-z0-9_-]{32,256})\/(\d+)\/(.+)$/i);
   if (c) {
     p = new URLSearchParams();
     p.set('v', '1');
-    p.set('endpoint', 'wss://' + c[1] + ':' + c[2]);
-    p.set('fp', c[3].toLowerCase().match(/../g).join(':'));
-    p.set('token', c[4]);
-    p.set('exp', c[5]);
-    if (c[6] !== '-') p.set('inet', 'wss://' + c[6]);
+    p.set('endpoint', 'wss://' + c[2] + ':' + c[3]);
+    p.set('fp', c[4].toLowerCase().match(/../g).join(':'));
+    p.set('token', c[5]);
+    p.set('exp', c[6]);
+    if (c[7] !== '-') p.set('inet', 'wss://' + c[7]);
   }
   const hash = '#' + p.toString();
   const valid = p.get('v') === '1' && /^wss:\/\//.test(p.get('endpoint') || '') &&
@@ -67,19 +85,9 @@
     $('redo').hidden = step !== 2;
   };
 
-  $('dl').href = APK;
-  // Luôn tải BeeAgent MỚI NHẤT: hỏi GitHub các bản phát hành, lấy file BeeAgent-v*.apk mới nhất
-  // (kho có lẫn bản Reg Center / Takabee Reg). Lỗi mạng / hết lượt hỏi -> giữ link dự phòng ở trên.
-  fetch('https://api.github.com/repos/duytuan2042-ui/beeagent-downloads/releases?per_page=30')
-    .then((r) => r.ok ? r.json() : [])
-    .then((rels) => {
-      for (const rel of rels) {
-        if (rel.draft) continue;                 // BeeAgent luôn đăng dạng prerelease -> không loại
-        const a = (rel.assets || []).find((x) => /^BeeAgent-v[\d.]+.*\.apk$/i.test(x.name));
-        if (a) { $('dl').href = a.browser_download_url; break; }
-      }
-    })
-    .catch(() => {});
+  const cus = c ? c[1] === 'c' : p.get('ed') === 'c';
+  $('dl').href = cus ? APK_CUS : APK_ADMIN;
+  latest(cus, (u) => { $('dl').href = u; });
   $('dl').addEventListener('click', () => { set('2'); setTimeout(() => show(2), 300); });
   $('open').href = '../open/' + hash;
   $('redo').addEventListener('click', (e) => { e.preventDefault(); set(null); show(1); });
